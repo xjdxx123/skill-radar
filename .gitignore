@@ -1,0 +1,17 @@
+# deps
+node_modules/
+dist/
+*.tsbuildinfo
+
+# local data (skill-radar's own SQLite + ingest state)
+*.sqlite
+*.sqlite-*
+.skill-radar/
+
+# brainstorming companion artifacts (mockups, server state)
+.superpowers/
+
+# os / editor
+.DS_Store
+.vscode/
+*.log
