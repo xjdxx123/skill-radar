@@ -1,0 +1,23 @@
+{
+  "name": "skill-radar",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Capability radar for AI coding agents — surface the skills, tools, and subagents your agent ignores.",
+  "license": "MIT",
+  "scripts": {
+    "radar": "tsx src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
