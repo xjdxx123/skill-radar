@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { Db } from '../db/index';
 import type { InventoryItem, UsageEvent } from '../types';
 import { parseTranscript } from './parse';
+import { extractPrompts } from './prompts';
 
 export interface IngestResult {
   filesScanned: number;
@@ -50,6 +51,18 @@ function insertEvents(db: Db, events: UsageEvent[]): number {
   return inserted;
 }
 
+function insertPrompts(db: Db, content: string): void {
+  const stmt = db.prepare(
+    `INSERT OR IGNORE INTO prompts (uuid, session_id, project, ts, text)
+     VALUES (@uuid, @sessionId, @project, @ts, @text)`,
+  );
+  const rows = extractPrompts(content);
+  const tx = db.transaction((rs: ReturnType<typeof extractPrompts>) => {
+    for (const r of rs) stmt.run(r);
+  });
+  tx(rows);
+}
+
 export function ingestClaudeCode(db: Db, opts: { root: string }): IngestResult {
   const files = walkJsonl(opts.root);
   const getCursor = db.prepare(`SELECT mtime FROM ingest_cursors WHERE file_path = ?`);
@@ -67,6 +80,7 @@ export function ingestClaudeCode(db: Db, opts: { root: string }): IngestResult {
     filesScanned += 1;
     const content = readFileSync(file, 'utf8');
     inserted += insertEvents(db, parseTranscript(content));
+    insertPrompts(db, content);
     upsertCursor.run(file, mtime);
   }
   return { filesScanned, inserted };

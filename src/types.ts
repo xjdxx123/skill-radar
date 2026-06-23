@@ -40,3 +40,11 @@ export interface CoverageOptions {
   underusedStaleDays: number; // default 14
   now: Date;
 }
+
+export interface PromptRow {
+  uuid: string;
+  sessionId: string;
+  project: string;
+  ts: string;
+  text: string;
+}

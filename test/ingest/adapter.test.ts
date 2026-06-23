@@ -7,7 +7,7 @@ import { ingestClaudeCode } from '../../src/ingest/adapter';
 
 function transcript(sessionId: string): string {
   return [
-    JSON.stringify({ type: 'user', sessionId, timestamp: '2026-06-23T10:00:00.000Z', cwd: '/proj', message: { content: 'hi' } }),
+    JSON.stringify({ type: 'user', sessionId, timestamp: '2026-06-23T10:00:00.000Z', cwd: '/proj', uuid: `${sessionId}-u`, message: { content: 'hi' } }),
     JSON.stringify({ type: 'assistant', sessionId, timestamp: '2026-06-23T10:00:01.000Z', cwd: '/proj', message: { content: [
       { type: 'tool_use', id: `${sessionId}-skill`, name: 'Skill', input: { skill: 'graphify' }, caller: { type: 'direct' } },
     ] } }),
@@ -53,5 +53,16 @@ describe('ingestClaudeCode', () => {
     expect(second.inserted).toBe(0);
     const c = db.prepare(`SELECT COUNT(*) AS c FROM events`).get() as { c: number };
     expect(c.c).toBe(1);
+  });
+
+  test('stores the prompt corpus during ingest', () => {
+    const projDir = join(root, 'p');
+    mkdirSync(projDir, { recursive: true });
+    writeFileSync(join(projDir, 'a.jsonl'), transcript('sess-a'));
+    ingestClaudeCode(db, { root });
+    const c = db.prepare(`SELECT COUNT(*) AS c FROM prompts`).get() as { c: number };
+    expect(c.c).toBe(1);
+    const p = db.prepare(`SELECT text FROM prompts LIMIT 1`).get() as { text: string };
+    expect(p.text).toBe('hi');
   });
 });
