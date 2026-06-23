@@ -88,6 +88,20 @@ npm run radar -- suggestions [--skill NAME]
 
 - `--skill <name>` — show only the package for a specific skill.
 
+### `serve`
+
+Start the local web dashboard:
+
+```
+npm run radar -- serve [--port N]
+```
+
+- `--port <n>` — port to listen on (default: `4319`).
+- `--window <days>` — look-back window for usage counts (default: `30`).
+- `--stale <days>` — threshold in days for flagging a capability as underused (default: `14`).
+
+Opens a browser-based dashboard showing the coverage summary, the ignored/underused panel, the top-used leaderboard, and the AI optimization-suggestion feed. Binds to `127.0.0.1` (localhost only); reads the local DB; no network access.
+
 ## Database location
 
 By default the database lives at `~/.skill-radar/skill-radar.sqlite`.
