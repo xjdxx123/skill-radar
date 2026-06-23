@@ -49,3 +49,16 @@ describe('createApp routes', () => {
     expect((await app.request('/nope')).status).toBe(404);
   });
 });
+
+describe('static dashboard', () => {
+  test('GET / serves the dashboard HTML', async () => {
+    const app = createApp(seed(), OPTS);
+    const res = await app.request('/');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toMatch(/text\/html/);
+    const html = await res.text();
+    expect(html).toContain('skill-radar');
+    expect(html).toContain('/api/stats');
+    expect(html).toContain('id="suggestions"');
+  });
+});
