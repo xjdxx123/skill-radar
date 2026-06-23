@@ -58,3 +58,20 @@ export interface MissedCandidate {
   score: number;
   matched: string[];
 }
+
+export type FacetKind = 'summary' | 'description' | 'triggers' | 'nonGoals' | 'disambiguation' | 'name';
+export type Confidence = 'high' | 'medium' | 'low';
+
+export interface OptimizationFacet {
+  facet: FacetKind;
+  diagnosis: string;
+  suggestion: string;
+  confidence: Confidence;
+}
+
+export interface OptimizationPackage {
+  trulyMissed: boolean | null;
+  verdictReasoning: string | null;
+  overallConfidence: Confidence;
+  facets: OptimizationFacet[];
+}
