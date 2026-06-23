@@ -12,6 +12,7 @@ import { formatCandidates } from './missed/report';
 import { analyzeSkills } from './analyze/analyze';
 import { spawnClaudeRunner } from './analyze/runner';
 import { readOptimizations, formatSuggestions } from './analyze/suggestions';
+import { startServer } from './server/server';
 
 function defaultDbPath(): string {
   if (process.env.SKILL_RADAR_DB) return process.env.SKILL_RADAR_DB;
@@ -162,6 +163,20 @@ program
   .action((opts) => {
     const out = withDb(opts.db, (db) => formatSuggestions(readOptimizations(db, opts.skill)));
     console.log(out);
+  });
+
+program
+  .command('serve')
+  .description('start the local web dashboard')
+  .option('--db <path>', 'database file path')
+  .option('--port <n>', 'port', '4319')
+  .option('--window <days>', 'window in days', '30')
+  .option('--stale <days>', 'underused staleness threshold in days', '14')
+  .action((opts) => {
+    const port = Number(opts.port);
+    const db = openDb(opts.db ?? defaultDbPath());
+    startServer(db, { windowDays: Number(opts.window), underusedStaleDays: Number(opts.stale) }, port);
+    console.log(`skill-radar dashboard at http://localhost:${port}`);
   });
 
 program.parseAsync().catch((err) => {

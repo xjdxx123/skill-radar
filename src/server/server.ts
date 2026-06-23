@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { serve } from '@hono/node-server';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Db } from '../db/index';
@@ -26,4 +27,9 @@ export function createApp(db: Db, opts: ServerOptions): Hono {
   app.get('/api/suggestions', (c) => c.json(readOptimizations(db)));
   app.get('/', (c) => c.html(DASHBOARD_HTML));
   return app;
+}
+
+export function startServer(db: Db, opts: ServerOptions, port: number): void {
+  const app = createApp(db, opts);
+  serve({ fetch: app.fetch, port });
 }
