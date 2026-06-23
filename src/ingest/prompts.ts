@@ -15,7 +15,7 @@ function isInjectedText(text: string): boolean {
 }
 
 function isMetaRecord(rec: any): boolean {
-  return rec.isMeta === true || rec.isCompactSummary === true || rec.isVisibleInTranscriptOnly === true;
+  return rec.isMeta === true || rec.isCompactSummary === true || rec.isVisibleInTranscriptOnly === true || rec.isSidechain === true;
 }
 
 function textOf(content: unknown): string | null {

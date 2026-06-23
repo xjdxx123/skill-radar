@@ -46,4 +46,16 @@ describe('extractPrompts', () => {
     expect(prompts).toHaveLength(1);
     expect(prompts[0]).toMatchObject({ uuid: 'g1', text: 'a genuine question about the code' });
   });
+
+  test('drops sidechain (subagent-dispatch) prompts', () => {
+    const fixture = [
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:00.000Z', cwd: '/p', uuid: 'h1', isSidechain: false,
+        message: { content: 'a real human question' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:01.000Z', cwd: '/p', uuid: 'a1', isSidechain: true,
+        message: { content: 'You are implementing Task 6 of an 8-task plan' } }),
+    ].join('\n');
+    const prompts = extractPrompts(fixture);
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0].uuid).toBe('h1');
+  });
 });
