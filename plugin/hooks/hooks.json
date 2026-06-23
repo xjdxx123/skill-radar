@@ -1,0 +1,19 @@
+{
+  "description": "skill-radar: refresh usage data at session start (no-op if the skill-radar CLI is not installed)",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "export PATH=\"$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\"; if command -v skill-radar >/dev/null 2>&1; then skill-radar ingest >/dev/null 2>&1; skill-radar scan >/dev/null 2>&1; fi; echo '{\"continue\":true,\"suppressOutput\":true}'",
+            "async": true,
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

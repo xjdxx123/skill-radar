@@ -113,3 +113,28 @@ flag on any command.
 - **Local-first**: all data stays on your machine. No network calls are made. Analysis sends your prompt history and SKILL.md text to your local `claude` CLI (your own authenticated session) — it stays on your machine; nothing is sent to third parties by skill-radar.
 - **Slash-commands and built-in subagents** are not yet included in the
   capability denominator (planned for a future plan).
+
+## Claude Code plugin
+
+skill-radar ships as a Claude Code plugin (`plugin/`): slash commands, an analyst subagent, and a SessionStart hook
+that keeps usage data fresh automatically.
+
+### Install
+
+```bash
+git clone https://github.com/xjdxx123/skill-radar && cd skill-radar
+npm install
+npm link   # puts the `skill-radar` command on your PATH (used by the plugin's commands + hook)
+```
+
+Then add the plugin to Claude Code by pointing it at this repo's `plugin/` directory (e.g. via a local marketplace
+entry). The SessionStart hook is **guarded** — if `skill-radar` is not on your PATH it is a silent no-op, so
+installing the plugin without `npm link` does no harm.
+
+### What you get
+
+- **`/skill-radar:report`** — coverage summary (ignored / underused / top-used).
+- **`/skill-radar:analyze`** — headless AI optimization pass + suggestions.
+- **`/skill-radar:dashboard`** — launch the local web dashboard.
+- **`skill-radar-analyst`** subagent — diagnoses why a skill is ignored and proposes routing fixes.
+- **SessionStart hook** — runs `skill-radar ingest && scan` (incremental, async) so your data stays current.

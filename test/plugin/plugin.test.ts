@@ -30,3 +30,16 @@ describe('analyst subagent', () => {
     expect(md).toMatch(/\ndescription:\s*\S+/);
   });
 });
+
+describe('hooks', () => {
+  test('hooks.json defines a guarded SessionStart command', () => {
+    const h = JSON.parse(read('hooks/hooks.json'));
+    const sessionStart = h.hooks?.SessionStart;
+    expect(Array.isArray(sessionStart)).toBe(true);
+    const cmd = sessionStart[0].hooks[0];
+    expect(cmd.type).toBe('command');
+    expect(cmd.command).toContain('command -v skill-radar');
+    expect(cmd.command).toContain('skill-radar ingest');
+    expect(cmd.async).toBe(true);
+  });
+});
