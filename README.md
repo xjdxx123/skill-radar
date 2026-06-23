@@ -127,6 +127,8 @@ npm install
 npm link   # puts the `skill-radar` command on your PATH (used by the plugin's commands + hook)
 ```
 
+Use a normal `npm install` (not `--production` / `--omit=dev`): the `skill-radar` command runs via `tsx`, which is a dev dependency.
+
 Then add the plugin to Claude Code by pointing it at this repo's `plugin/` directory (e.g. via a local marketplace
 entry). The SessionStart hook is **guarded** — if `skill-radar` is not on your PATH it is a silent no-op, so
 installing the plugin without `npm link` does no harm.
