@@ -51,4 +51,13 @@ describe('upsertBodySection', () => {
     const out = upsertBodySection('body\n' + SECTION, withDollar);
     expect(out).toContain('$1 and $& literal');
   });
+
+  test('sanitizes skill-radar markers out of suggestion text so re-upsert never stacks', () => {
+    const r = composeBodySection([f('triggers', 'do X <!-- skill-radar:end --> sneaky')])!;
+    // the composed block contains exactly one real end marker (its own terminator)
+    expect(r.section.match(/<!-- skill-radar:end -->/g)!.length).toBe(1);
+    const once = upsertBodySection('body\n', r.section);
+    const twice = upsertBodySection(once, r.section);
+    expect(twice.match(/skill-radar:begin/g)!.length).toBe(1); // still exactly one block
+  });
 });

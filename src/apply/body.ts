@@ -16,7 +16,8 @@ export function composeBodySection(facets: OptimizationFacet[]): { section: stri
   for (const a of ADVICE) {
     const f = facets.find((x) => x.facet === a.facet);
     if (f && typeof f.suggestion === 'string' && f.suggestion.trim()) {
-      parts.push(`**${a.label}:** ${f.suggestion.trim()}`);
+      const safe = f.suggestion.trim().split('<!-- skill-radar:').join('<!-- skill_radar:');
+      parts.push(`**${a.label}:** ${safe}`);
       used.push(a.facet);
     }
   }
