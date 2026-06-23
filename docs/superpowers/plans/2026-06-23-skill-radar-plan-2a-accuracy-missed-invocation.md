@@ -807,6 +807,111 @@ git commit -m "feat(missed): missed-invocation detector + candidates CLI command
 
 ---
 
+## Task 7: Filter injected / non-user content from the prompt corpus
+
+**Files:**
+- Modify: `src/ingest/prompts.ts`
+- Test: `test/ingest/prompts.test.ts` (add cases)
+
+Claude Code stores a lot of non-user-authored text in `type:'user'` records: memory-agent injections (`<observed_from_primary_session>`), `<system-reminder>` / `<task-notification>` blocks, hook output (`Stop hook feedback:`), local-command wrappers, and skill bodies. On real data ~46% of captured "prompts" are this noise, and it makes every top missed-invocation candidate a self-match (a skill's description matching its own injected SKILL.md text). This task filters it out so the corpus is genuine prompts. (Grounded: field-based filtering fails — `userType` is `'external'` for all; the reliable signal is content markers + the record-level meta flags.)
+
+- [ ] **Step 1: Add the failing tests** (append inside `describe('extractPrompts', ...)` in `test/ingest/prompts.test.ts`)
+
+```ts
+  test('drops injected / non-user content (markers + meta flags)', () => {
+    const fixture = [
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:00.000Z', cwd: '/p', uuid: 'g1',
+        message: { content: 'a genuine question about the code' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:01.000Z', cwd: '/p', uuid: 'n1',
+        message: { content: '<observed_from_primary_session>ship-loop:adversarial-eval verification doctrine ...</observed_from_primary_session>' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:02.000Z', cwd: '/p', uuid: 'n2',
+        message: { content: '<task-notification>workflow done</task-notification>' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:03.000Z', cwd: '/p', uuid: 'n3',
+        message: { content: 'here is some <system-reminder>do this</system-reminder> text' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:04.000Z', cwd: '/p', uuid: 'n4',
+        message: { content: 'Stop hook feedback: blah' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:05.000Z', cwd: '/p', uuid: 'n5', isMeta: true,
+        message: { content: 'meta record content' } }),
+    ].join('\n');
+    const prompts = extractPrompts(fixture);
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toMatchObject({ uuid: 'g1', text: 'a genuine question about the code' });
+  });
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `npx vitest run test/ingest/prompts.test.ts`
+Expected: the new test FAILS (injected content is currently captured); the existing 2 tests still pass.
+
+- [ ] **Step 3: Update `src/ingest/prompts.ts`**
+
+Add, near the top (after `const PROMPT_MAX = 2000;`):
+```ts
+const INJECTED_MARKERS = [
+  '<command-name>', '<command-message>', '<command-args>',
+  '<local-command-stdout>', '<local-command-caveat>',
+  '<system-reminder>', '<task-notification>',
+  '<observed_from_primary_session>', 'Hello memory agent',
+];
+
+function isInjectedText(text: string): boolean {
+  if (text.startsWith('Stop hook feedback:')) return true;
+  return INJECTED_MARKERS.some((m) => text.includes(m));
+}
+
+function isMetaRecord(rec: any): boolean {
+  return rec.isMeta === true || rec.isCompactSummary === true || rec.isVisibleInTranscriptOnly === true;
+}
+```
+
+In the `extractPrompts` loop, after `if (!rec || rec.type !== 'user') continue;`, add the meta guard:
+```ts
+    if (isMetaRecord(rec)) continue;
+```
+And after computing `text` (the `if (!text) continue;` line), add the marker guard:
+```ts
+    if (isInjectedText(text)) continue;
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `npx vitest run test/ingest/prompts.test.ts`
+Expected: PASS (3 tests).
+
+- [ ] **Step 5: Document the endsWith-bridge error direction (minor, from review)**
+
+In `src/missed/candidates.ts`, above the `sessionsWhereFired` closure, add a comment:
+```ts
+  // NOTE: the endsWith(':' + evName) bridge can over-match on leaf-name collisions
+  // (e.g. bare /deep-research marking academic-research-skills:deep-research as fired).
+  // This errs toward a false NEGATIVE (suppressing a candidate), never a false positive — acceptable here.
+```
+
+- [ ] **Step 6: Rebuild the local corpus and re-smoke-test**
+
+The fix only affects newly-ingested rows; existing `prompts` rows persist. Rebuild the local DB and confirm candidates are now genuine:
+```bash
+rm -f ~/.skill-radar/skill-radar.sqlite*
+npm run radar -- ingest
+npm run radar -- scan
+npm run radar -- candidates --limit 12
+```
+Expected: candidates are now real user prompts (no `<observed_from_primary_session>` / notification self-matches); report still prints. Capture the count of dropped-vs-kept if visible and 2-3 candidate examples.
+
+- [ ] **Step 7: Typecheck + full suite**
+
+Run: `npm run typecheck` (0) and `npm test` (all pass).
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/ingest/prompts.ts src/missed/candidates.ts test/ingest/prompts.test.ts
+git commit -m "fix(missed): filter injected/non-user content from the prompt corpus"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage (Plan 2a portion):**
