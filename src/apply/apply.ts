@@ -21,11 +21,16 @@ interface InvRow { scope: string; path: string; }
 export function applyOptimization(db: Db, opts: { skill: string; write: boolean }): ApplyResult {
   const skill = opts.skill;
 
-  const inv = db.prepare(`SELECT scope, path FROM inventory WHERE kind = 'skill' AND name = ?`).get(skill) as InvRow | undefined;
-  if (!inv) return { skill, status: 'skipped', reason: `skill "${skill}" not found in inventory (run scan first)` };
-  if (inv.scope !== 'user' && inv.scope !== 'project') {
-    return { skill, status: 'skipped', scope: inv.scope, path: inv.path, reason: `scope "${inv.scope}" is not editable — only user/project skills can be modified (plugin/bundled skills live in the plugin cache)` };
+  const rows = db.prepare(`SELECT scope, path FROM inventory WHERE kind = 'skill' AND name = ?`).all(skill) as InvRow[];
+  if (rows.length === 0) return { skill, status: 'skipped', reason: `skill "${skill}" not found in inventory (run scan first)` };
+  const editable = rows.filter((r) => r.scope === 'user' || r.scope === 'project');
+  if (editable.length === 0) {
+    return { skill, status: 'skipped', scope: rows[0].scope, path: rows[0].path, reason: `scope "${rows[0].scope}" is not editable — only user/project skills can be modified (plugin/bundled skills live in the plugin cache)` };
   }
+  if (editable.length > 1) {
+    return { skill, status: 'skipped', reason: `"${skill}" exists in multiple editable scopes (${editable.map((r) => r.scope).join(', ')}) — cannot safely choose which SKILL.md to edit` };
+  }
+  const inv = editable[0];
 
   const opt = readOptimizations(db, skill)[0];
   if (!opt) return { skill, status: 'skipped', scope: inv.scope, path: inv.path, reason: `no optimization stored for "${skill}" — run \`skill-radar analyze\` first` };

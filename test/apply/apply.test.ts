@@ -83,4 +83,20 @@ describe('applyOptimization', () => {
     expect(r.status).toBe('skipped');
     expect(r.reason).toMatch(/not found|inventory/i);
   });
+
+  test('refuses when the skill name is ambiguous across editable scopes (user + project)', () => {
+    const db = openDb(':memory:');
+    const projPath = join(dir, 'PROJECT_SKILL.md');
+    writeFileSync(projPath, ORIG);
+    db.prepare(`INSERT INTO inventory (scanned_at, kind, name, scope, description, triggers, path) VALUES ('t','skill','verify','user','old desc',null,?)`).run(skillPath);
+    db.prepare(`INSERT INTO inventory (scanned_at, kind, name, scope, description, triggers, path) VALUES ('t','skill','verify','project','old desc',null,?)`).run(projPath);
+    db.prepare(`INSERT INTO optimizations (created_at, target_kind, target_name, status, overall_confidence, facets, applied) VALUES ('t','skill','verify','never','high',?,0)`)
+      .run(JSON.stringify({ trulyMissed: true, verdictReasoning: 'r', overallConfidence: 'high', facets: [{ facet: 'description', diagnosis: 'd', suggestion: 'new desc', confidence: 'high' }] }));
+    const r = applyOptimization(db, { skill: 'verify', write: true });
+    expect(r.status).toBe('skipped');
+    expect(r.reason).toMatch(/ambiguous|multiple/i);
+    // neither file modified
+    expect(readFileSync(skillPath, 'utf8')).toBe(ORIG);
+    expect(readFileSync(projPath, 'utf8')).toBe(ORIG);
+  });
 });
