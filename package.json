@@ -4,6 +4,9 @@
   "type": "module",
   "description": "Capability radar for AI coding agents — surface the skills, tools, and subagents your agent ignores.",
   "license": "MIT",
+  "bin": {
+    "skill-radar": "./bin/skill-radar.mjs"
+  },
   "scripts": {
     "radar": "tsx src/cli.ts",
     "test": "vitest run",
