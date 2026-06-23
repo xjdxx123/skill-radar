@@ -91,4 +91,9 @@ program
     console.log(out);
   });
 
-program.parse();
+try {
+  program.parse();
+} catch (err) {
+  console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1);
+}

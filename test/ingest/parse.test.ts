@@ -48,4 +48,12 @@ describe('parseTranscript', () => {
     const events = parseTranscript(FIXTURE);
     expect(events).toHaveLength(4);
   });
+
+  test('skips tool_use blocks that have no string id (avoids null-id duplication)', () => {
+    const line = JSON.stringify({
+      type: 'assistant', sessionId: 's', timestamp: '2026-06-23T10:00:00.000Z', cwd: '/p',
+      message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: 'ls' } }] },
+    });
+    expect(parseTranscript(line)).toHaveLength(0);
+  });
 });

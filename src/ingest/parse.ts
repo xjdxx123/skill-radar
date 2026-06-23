@@ -61,6 +61,7 @@ export function parseTranscript(content: string, opts: { agent?: Agent } = {}): 
         if (!block || typeof block !== 'object' || block.type !== 'tool_use') continue;
         const cls = classifyToolUse(block);
         if (!cls) continue;
+        if (typeof block.id !== 'string' || !block.id) continue;
         events.push({
           ts: typeof rec.timestamp === 'string' ? rec.timestamp : '',
           sessionId: typeof rec.sessionId === 'string' ? rec.sessionId : '',
@@ -70,7 +71,7 @@ export function parseTranscript(content: string, opts: { agent?: Agent } = {}): 
           name: cls.name,
           trigger: block.caller?.type ?? null,
           source: null,
-          toolUseId: typeof block.id === 'string' ? block.id : null,
+          toolUseId: block.id,
           promptExcerpt: lastPrompt,
         });
       }

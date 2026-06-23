@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS inventory (
   UNIQUE(kind, name, scope)
 );
 
+-- Reserved for Plan 2 (session-level rollups); not written in Plan 1.
 CREATE TABLE IF NOT EXISTS sessions (
   session_id TEXT PRIMARY KEY,
   project TEXT,
