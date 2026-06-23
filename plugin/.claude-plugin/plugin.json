@@ -1,0 +1,10 @@
+{
+  "name": "skill-radar",
+  "description": "Surface the skills, subagents, and MCP servers your agent ignores — and get AI-generated routing fixes. Local-first.",
+  "version": "0.1.0",
+  "author": { "name": "skill-radar contributors" },
+  "homepage": "https://github.com/xjdxx123/skill-radar",
+  "repository": "https://github.com/xjdxx123/skill-radar",
+  "license": "MIT",
+  "keywords": ["skills", "analytics", "observability", "optimization", "claude-code"]
+}
