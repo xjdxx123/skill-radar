@@ -88,6 +88,16 @@ npm run radar -- suggestions [--skill NAME]
 
 - `--skill <name>` — show only the package for a specific skill.
 
+### `apply`
+
+Apply a stored optimization's suggested description to a user or project skill's `SKILL.md`:
+
+```
+npm run radar -- apply <skill> [--write] [--db <path>]
+```
+
+- `npm run radar -- apply <skill> [--write]` — apply a stored optimization's suggested description to a user/project skill's SKILL.md. Dry-run by default; `--write` makes a `.bak` backup then rewrites. Refuses plugin/bundled skills.
+
 ### `serve`
 
 Start the local web dashboard:
