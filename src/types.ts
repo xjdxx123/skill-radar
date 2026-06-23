@@ -1,5 +1,5 @@
 export type Agent = 'claude-code' | 'codex';
-export type EventKind = 'skill' | 'tool' | 'subagent';
+export type EventKind = 'skill' | 'tool' | 'subagent' | 'command';
 export type CapabilityKind = 'skill' | 'command' | 'agent' | 'mcp';
 export type Scope = 'user' | 'project' | 'plugin' | 'bundled';
 export type CoverageStatus = 'never' | 'underused' | 'healthy';
@@ -39,4 +39,22 @@ export interface CoverageOptions {
   windowDays: number; // default 30
   underusedStaleDays: number; // default 14
   now: Date;
+}
+
+export interface PromptRow {
+  uuid: string;
+  sessionId: string;
+  project: string;
+  ts: string;
+  text: string;
+}
+
+export interface MissedCandidate {
+  skill: string;
+  scope: string;
+  promptText: string;
+  sessionId: string;
+  ts: string;
+  score: number;
+  matched: string[];
 }

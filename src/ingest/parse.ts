@@ -51,6 +51,27 @@ export function parseTranscript(content: string, opts: { agent?: Agent } = {}): 
     const msgContent = msg && typeof msg === 'object' ? (msg as any).content : undefined;
 
     if (rec.type === 'user') {
+      const raw = typeof msgContent === 'string' ? msgContent : null;
+      if (raw && raw.includes('<command-name>')) {
+        const m = raw.match(/<command-name>\s*\/?([^<]+?)\s*<\/command-name>/);
+        const cmd = m?.[1]?.trim();
+        const uuid = typeof rec.uuid === 'string' ? rec.uuid : null;
+        if (cmd && uuid) {
+          events.push({
+            ts: typeof rec.timestamp === 'string' ? rec.timestamp : '',
+            sessionId: typeof rec.sessionId === 'string' ? rec.sessionId : '',
+            project: typeof rec.cwd === 'string' ? rec.cwd : '',
+            agent,
+            kind: 'command',
+            name: cmd,
+            trigger: 'slash',
+            source: null,
+            toolUseId: uuid,
+            promptExcerpt: null,
+          });
+        }
+        continue;
+      }
       const t = userText(msgContent);
       if (t) lastPrompt = t;
       continue;

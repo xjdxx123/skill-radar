@@ -42,4 +42,13 @@ CREATE TABLE IF NOT EXISTS ingest_cursors (
   byte_offset INTEGER NOT NULL DEFAULT 0,
   mtime INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS prompts (
+  uuid TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  project TEXT NOT NULL,
+  ts TEXT NOT NULL,
+  text TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_prompts_session ON prompts(session_id);
 `;

@@ -25,4 +25,14 @@ describe('openDb', () => {
     const db = openDb(':memory:');
     expect(() => db.exec('SELECT 1 FROM inventory LIMIT 1')).not.toThrow();
   });
+
+  test('prompts table exists with a uuid primary key', () => {
+    const db = openDb(':memory:');
+    db.prepare(`INSERT INTO prompts (uuid, session_id, project, ts, text) VALUES (?,?,?,?,?)`)
+      .run('u1', 's1', '/p', '2026-06-23T00:00:00.000Z', 'hello');
+    db.prepare(`INSERT OR IGNORE INTO prompts (uuid, session_id, project, ts, text) VALUES (?,?,?,?,?)`)
+      .run('u1', 's1', '/p', '2026-06-23T00:00:00.000Z', 'hello');
+    const c = db.prepare(`SELECT COUNT(*) AS c FROM prompts`).get() as { c: number };
+    expect(c.c).toBe(1);
+  });
 });
