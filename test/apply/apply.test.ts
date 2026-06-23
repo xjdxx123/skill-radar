@@ -23,8 +23,8 @@ function seed(scope = 'user', withOpt = true, descFacet = true): Db {
   if (withOpt) {
     const facets = descFacet
       ? [{ facet: 'description', diagnosis: 'vague', suggestion: 'Use when verifying a fix by running the app', confidence: 'high' },
-         { facet: 'triggers', diagnosis: 'missing', suggestion: 'add: confirm the fix works', confidence: 'medium' }]
-      : [{ facet: 'triggers', diagnosis: 'missing', suggestion: 'add: confirm the fix works', confidence: 'medium' }];
+         { facet: 'triggers', diagnosis: 'missing', suggestion: 'confirm the fix works', confidence: 'medium' }]
+      : [{ facet: 'triggers', diagnosis: 'missing', suggestion: 'confirm the fix works', confidence: 'medium' }];
     db.prepare(`INSERT INTO optimizations (created_at, target_kind, target_name, status, overall_confidence, facets, applied) VALUES ('t','skill','verify','never','high',?,0)`)
       .run(JSON.stringify({ trulyMissed: true, verdictReasoning: 'r', overallConfidence: 'high', facets }));
   }
@@ -32,27 +32,38 @@ function seed(scope = 'user', withOpt = true, descFacet = true): Db {
 }
 
 describe('applyOptimization', () => {
-  test('dry-run reports old→new but does NOT modify the file', () => {
+  test('dry-run reports old→new + body facets, but does NOT modify the file', () => {
     const db = seed();
     const r = applyOptimization(db, { skill: 'verify', write: false });
     expect(r.status).toBe('dry-run');
     expect(r.oldDescription).toBe('old desc');
     expect(r.newDescription).toBe('Use when verifying a fix by running the app');
+    expect(r.bodyFacets).toContain('triggers');
     expect(readFileSync(skillPath, 'utf8')).toBe(ORIG);
     expect(existsSync(skillPath + '.bak')).toBe(false);
-    expect(r.otherFacets?.some((f) => f.facet === 'triggers')).toBe(true);
+    expect((db.prepare(`SELECT applied FROM optimizations WHERE target_name='verify'`).get() as any).applied).toBe(0);
   });
 
-  test('--write backs up then rewrites the description', () => {
+  test('--write backs up, rewrites description, writes the body section, and sets applied=1', () => {
     const db = seed();
     const r = applyOptimization(db, { skill: 'verify', write: true });
     expect(r.status).toBe('applied');
-    expect(r.backupPath).toBe(skillPath + '.bak');
     expect(readFileSync(skillPath + '.bak', 'utf8')).toBe(ORIG);
     const updated = readFileSync(skillPath, 'utf8');
     expect(updated).toContain('description: "Use when verifying a fix by running the app"');
     expect(updated).toContain('name: verify');
     expect(updated).toContain('run the app');
+    expect(updated).toContain('<!-- skill-radar:begin -->');
+    expect(updated).toContain('**Use when:** confirm the fix works');
+    expect((db.prepare(`SELECT applied FROM optimizations WHERE target_name='verify'`).get() as any).applied).toBe(1);
+  });
+
+  test('re-applying does not stack the body section', () => {
+    const db = seed();
+    applyOptimization(db, { skill: 'verify', write: true });
+    applyOptimization(db, { skill: 'verify', write: true });
+    const updated = readFileSync(skillPath, 'utf8');
+    expect(updated.match(/skill-radar:begin/g)!.length).toBe(1);
   });
 
   test('refuses non-user/project scope (plugin skills are not editable)', () => {
@@ -75,6 +86,7 @@ describe('applyOptimization', () => {
     const r = applyOptimization(db, { skill: 'verify', write: true });
     expect(r.status).toBe('skipped');
     expect(r.reason).toMatch(/description/i);
+    expect(readFileSync(skillPath, 'utf8')).toBe(ORIG);
   });
 
   test('skips when the skill is not in inventory', () => {
@@ -95,7 +107,6 @@ describe('applyOptimization', () => {
     const r = applyOptimization(db, { skill: 'verify', write: true });
     expect(r.status).toBe('skipped');
     expect(r.reason).toMatch(/ambiguous|multiple/i);
-    // neither file modified
     expect(readFileSync(skillPath, 'utf8')).toBe(ORIG);
     expect(readFileSync(projPath, 'utf8')).toBe(ORIG);
   });
