@@ -1,5 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { parseHookEvent } from '../../src/ingest/hook';
+import { openDb } from '../../src/db/index';
+import { ingestHookEvent } from '../../src/ingest/hook';
 
 const NOW = new Date('2026-06-23T12:00:00.000Z');
 
@@ -34,5 +36,27 @@ describe('parseHookEvent', () => {
   test('returns null for malformed JSON or an untrackable payload', () => {
     expect(parseHookEvent('not json', { now: NOW })).toBeNull();
     expect(parseHookEvent(JSON.stringify({ tool_use_id: 't', tool_name: 'Skill', tool_input: {} }), { now: NOW })).toBeNull();
+  });
+});
+
+const skillPayload = (id: string) => JSON.stringify({ session_id: 's', cwd: '/p', tool_name: 'Skill', tool_input: { skill: 'graphify' }, tool_use_id: id });
+
+describe('ingestHookEvent', () => {
+  test('inserts one event and is idempotent on (session, tool_use_id)', () => {
+    const db = openDb(':memory:');
+    expect(ingestHookEvent(db, skillPayload('t1'), NOW)).toBe(true);
+    expect(ingestHookEvent(db, skillPayload('t1'), NOW)).toBe(false);
+    expect((db.prepare(`SELECT COUNT(*) AS c FROM events`).get() as any).c).toBe(1);
+  });
+
+  test('dedups against a JSONL-ingested event with the same session + tool_use_id', () => {
+    const db = openDb(':memory:');
+    db.prepare(`INSERT INTO events (ts, session_id, project, agent, kind, name, tool_use_id) VALUES ('2026-06-22T00:00:00.000Z','s','/p','claude-code','skill','graphify','t1')`).run();
+    expect(ingestHookEvent(db, skillPayload('t1'), NOW)).toBe(false);
+    expect((db.prepare(`SELECT COUNT(*) AS c FROM events`).get() as any).c).toBe(1);
+  });
+
+  test('returns false for an untrackable payload', () => {
+    expect(ingestHookEvent(openDb(':memory:'), 'garbage', NOW)).toBe(false);
   });
 });

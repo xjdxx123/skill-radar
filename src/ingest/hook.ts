@@ -1,4 +1,5 @@
 import type { Agent, UsageEvent } from '../types';
+import type { Db } from '../db/index';
 import { classifyToolUse } from './parse';
 
 export function parseHookEvent(payloadJson: string, opts: { now: Date; agent?: Agent }): UsageEvent | null {
@@ -32,4 +33,14 @@ export function parseHookEvent(payloadJson: string, opts: { now: Date; agent?: A
     toolUseId,
     promptExcerpt: null,
   };
+}
+
+export function ingestHookEvent(db: Db, payloadJson: string, now: Date): boolean {
+  const ev = parseHookEvent(payloadJson, { now });
+  if (!ev) return false;
+  const stmt = db.prepare(
+    `INSERT OR IGNORE INTO events (ts, session_id, project, agent, kind, name, trigger, source, tool_use_id, prompt_excerpt)
+     VALUES (@ts, @sessionId, @project, @agent, @kind, @name, @trigger, @source, @toolUseId, @promptExcerpt)`,
+  );
+  return stmt.run(ev).changes > 0;
 }

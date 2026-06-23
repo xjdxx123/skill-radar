@@ -1,9 +1,10 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { Command } from 'commander';
 import { openDb, type Db } from './db/index';
 import { ingestClaudeCode } from './ingest/adapter';
+import { ingestHookEvent } from './ingest/hook';
 import { scanInventory, writeInventory } from './inventory/scan';
 import { computeCoverage } from './coverage/engine';
 import { formatReport } from './coverage/report';
@@ -50,7 +51,19 @@ program
   .description('ingest Claude Code transcripts')
   .option('--db <path>', 'database file path')
   .option('--projects-dir <dir>', 'override ~/.claude/projects')
+  .option('--hook', 'ingest a single PostToolUse payload from stdin (real-time)', false)
   .action((opts) => {
+    if (opts.hook) {
+      // read the piped payload from fd 0; guard against a TTY (readFileSync(0) blocks forever
+      // with no EOF on an interactive terminal — a manual `ingest --hook` with no pipe no-ops).
+      let payload = '';
+      if (!process.stdin.isTTY) {
+        try { payload = readFileSync(0, 'utf8'); } catch { payload = ''; }
+      }
+      const inserted = withDb(opts.db, (db) => ingestHookEvent(db, payload, new Date()));
+      console.log(inserted ? 'Ingested 1 event from hook.' : 'No event ingested (duplicate or untracked).');
+      return;
+    }
     const root = opts.projectsDir ?? join(homedir(), '.claude', 'projects');
     const res = withDb(opts.db, (db) => ingestClaudeCode(db, { root }));
     console.log(`Ingested: ${res.inserted} new event(s) from ${res.filesScanned} changed file(s).`);
