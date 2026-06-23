@@ -30,6 +30,9 @@ export function findMissedInvocations(db: Db, opts: MissedOptions): MissedCandid
     if (!firedSessions.has(u.name)) firedSessions.set(u.name, new Set());
     firedSessions.get(u.name)!.add(u.session_id);
   }
+  // NOTE: the endsWith(':' + evName) bridge can over-match on leaf-name collisions
+  // (e.g. bare /deep-research marking academic-research-skills:deep-research as fired).
+  // This errs toward a false NEGATIVE (suppressing a candidate), never a false positive — acceptable here.
   const sessionsWhereFired = (skillName: string): Set<string> => {
     const out = new Set<string>();
     for (const [evName, sessions] of firedSessions) {

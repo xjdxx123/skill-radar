@@ -26,4 +26,24 @@ describe('extractPrompts', () => {
     expect(prompts.some((p) => p.text.includes('command-name'))).toBe(false);
     expect(prompts.some((p) => p.text === 'ok')).toBe(false);
   });
+
+  test('drops injected / non-user content (markers + meta flags)', () => {
+    const fixture = [
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:00.000Z', cwd: '/p', uuid: 'g1',
+        message: { content: 'a genuine question about the code' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:01.000Z', cwd: '/p', uuid: 'n1',
+        message: { content: '<observed_from_primary_session>ship-loop:adversarial-eval verification doctrine ...</observed_from_primary_session>' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:02.000Z', cwd: '/p', uuid: 'n2',
+        message: { content: '<task-notification>workflow done</task-notification>' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:03.000Z', cwd: '/p', uuid: 'n3',
+        message: { content: 'here is some <system-reminder>do this</system-reminder> text' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:04.000Z', cwd: '/p', uuid: 'n4',
+        message: { content: 'Stop hook feedback: blah' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:05.000Z', cwd: '/p', uuid: 'n5', isMeta: true,
+        message: { content: 'meta record content' } }),
+    ].join('\n');
+    const prompts = extractPrompts(fixture);
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toMatchObject({ uuid: 'g1', text: 'a genuine question about the code' });
+  });
 });

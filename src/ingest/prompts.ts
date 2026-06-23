@@ -2,6 +2,22 @@ import type { PromptRow } from '../types';
 
 const PROMPT_MAX = 2000;
 
+const INJECTED_MARKERS = [
+  '<command-name>', '<command-message>', '<command-args>',
+  '<local-command-stdout>', '<local-command-caveat>',
+  '<system-reminder>', '<task-notification>',
+  '<observed_from_primary_session>', 'Hello memory agent',
+];
+
+function isInjectedText(text: string): boolean {
+  if (text.startsWith('Stop hook feedback:')) return true;
+  return INJECTED_MARKERS.some((m) => text.includes(m));
+}
+
+function isMetaRecord(rec: any): boolean {
+  return rec.isMeta === true || rec.isCompactSummary === true || rec.isVisibleInTranscriptOnly === true;
+}
+
 function textOf(content: unknown): string | null {
   if (typeof content === 'string') {
     if (content.includes('<command-name>')) return null;
@@ -32,11 +48,13 @@ export function extractPrompts(content: string): PromptRow[] {
       continue;
     }
     if (!rec || rec.type !== 'user') continue;
+    if (isMetaRecord(rec)) continue;
     const uuid = typeof rec.uuid === 'string' ? rec.uuid : null;
     if (!uuid) continue;
     const msg = rec.message;
     const text = textOf(msg && typeof msg === 'object' ? (msg as any).content : undefined);
     if (!text) continue;
+    if (isInjectedText(text)) continue;
     prompts.push({
       uuid,
       sessionId: typeof rec.sessionId === 'string' ? rec.sessionId : '',
