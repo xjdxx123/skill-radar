@@ -56,4 +56,30 @@ describe('parseTranscript', () => {
     });
     expect(parseTranscript(line)).toHaveLength(0);
   });
+
+  test('emits a command event from a <command-name> user record (slash invocation)', () => {
+    const line = JSON.stringify({
+      type: 'user', sessionId: 'sess-1', timestamp: '2026-06-23T10:00:00.000Z', cwd: '/proj', uuid: 'u-cmd-1',
+      message: { content: '<command-name>/graphify</command-name>\n<command-message>graphify</command-message>\n<command-args></command-args>' },
+    });
+    const events = parseTranscript(line);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ kind: 'command', name: 'graphify', trigger: 'slash', toolUseId: 'u-cmd-1' });
+  });
+
+  test('does not let command XML overwrite the real preceding prompt excerpt', () => {
+    const fixture = [
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:00.000Z', cwd: '/p', uuid: 'u0',
+        message: { content: 'do the thing' } }),
+      JSON.stringify({ type: 'user', sessionId: 's', timestamp: '2026-06-23T10:00:00.500Z', cwd: '/p', uuid: 'u1',
+        message: { content: '<command-name>/code-review</command-name>\n<command-message>cr</command-message>\n<command-args></command-args>' } }),
+      JSON.stringify({ type: 'assistant', sessionId: 's', timestamp: '2026-06-23T10:00:01.000Z', cwd: '/p',
+        message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }] } }),
+    ].join('\n');
+    const events = parseTranscript(fixture);
+    const bash = events.find((e) => e.toolUseId === 't1')!;
+    expect(bash.promptExcerpt).toBe('do the thing');
+    const cmd = events.find((e) => e.kind === 'command')!;
+    expect(cmd.name).toBe('code-review');
+  });
 });

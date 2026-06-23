@@ -1,5 +1,5 @@
 export type Agent = 'claude-code' | 'codex';
-export type EventKind = 'skill' | 'tool' | 'subagent';
+export type EventKind = 'skill' | 'tool' | 'subagent' | 'command';
 export type CapabilityKind = 'skill' | 'command' | 'agent' | 'mcp';
 export type Scope = 'user' | 'project' | 'plugin' | 'bundled';
 export type CoverageStatus = 'never' | 'underused' | 'healthy';
