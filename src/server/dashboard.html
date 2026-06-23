@@ -68,7 +68,7 @@ async function load() {
   const ignored = coverage.filter((r) => r.status !== 'healthy')
     .sort((a, b) => (a.status === 'never' ? 0 : 1) - (b.status === 'never' ? 0 : 1) || a.name.localeCompare(b.name));
   document.getElementById('ignored').innerHTML = ignored.length
-    ? ignored.map((r) => `<div class="row"><span>${esc(r.name)} <span class="muted">${esc(r.scope)} ${esc(r.kind)}</span></span><span class="pill ${r.status}">${r.status === 'never' ? '0 calls' : r.invocations + ' calls'}</span></div>`).join('')
+    ? ignored.map((r) => `<div class="row"><span>${esc(r.name)} <span class="muted">${esc(r.scope)} ${esc(r.kind)}</span></span><span class="pill ${esc(r.status)}">${r.status === 'never' ? '0 calls' : r.invocations + ' calls'}</span></div>`).join('')
     : '<div class="muted">none</div>';
 
   const top = coverage.filter((r) => r.invocations > 0).sort((a, b) => b.invocations - a.invocations).slice(0, 15);

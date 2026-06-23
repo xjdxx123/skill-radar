@@ -31,5 +31,5 @@ export function createApp(db: Db, opts: ServerOptions): Hono {
 
 export function startServer(db: Db, opts: ServerOptions, port: number): void {
   const app = createApp(db, opts);
-  serve({ fetch: app.fetch, port });
+  serve({ fetch: app.fetch, port, hostname: '127.0.0.1' });
 }
