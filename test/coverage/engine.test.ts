@@ -74,4 +74,24 @@ describe('computeCoverage', () => {
     const rows = computeCoverage(db, OPTS);
     expect(rows.find((r) => r.name === 'old')!.status).toBe('never');
   });
+
+  test('a slash-command invocation counts the skill as used (not ignored)', () => {
+    const db = openDb(':memory:');
+    const inv = db.prepare(
+      `INSERT INTO inventory (scanned_at, kind, name, scope, description, triggers, path) VALUES (?,?,?,?,?,?,?)`,
+    );
+    inv.run('t', 'skill', 'code-review', 'user', null, null, '/cr');
+    inv.run('t', 'skill', 'superpowers:brainstorming', 'plugin', null, null, '/b');
+
+    const ev = db.prepare(
+      `INSERT INTO events (ts, session_id, project, agent, kind, name, tool_use_id) VALUES (?,?,?,?,?,?,?)`,
+    );
+    ev.run('2026-06-22T00:00:00.000Z', 's', '/p', 'claude-code', 'command', 'code-review', 'c1');
+    ev.run('2026-06-22T00:00:00.000Z', 's', '/p', 'claude-code', 'command', 'brainstorming', 'c2');
+
+    const rows = computeCoverage(db, OPTS);
+    expect(rows.find((r) => r.name === 'code-review')!.invocations).toBe(1);
+    expect(rows.find((r) => r.name === 'code-review')!.status).not.toBe('never');
+    expect(rows.find((r) => r.name === 'superpowers:brainstorming')!.invocations).toBe(1);
+  });
 });

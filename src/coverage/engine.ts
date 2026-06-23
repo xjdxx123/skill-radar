@@ -25,7 +25,11 @@ interface InvRow { kind: CapabilityKind; name: string; scope: Scope; }
 interface Agg { kind: string; name: string; c: number; m: string | null; }
 
 function matches(item: InvRow, agg: Agg): boolean {
-  if (item.kind === 'skill') return agg.kind === 'skill' && agg.name === item.name;
+  if (item.kind === 'skill') {
+    if (agg.kind === 'skill' && agg.name === item.name) return true;
+    if (agg.kind === 'command' && (agg.name === item.name || item.name.endsWith(':' + agg.name))) return true;
+    return false;
+  }
   if (item.kind === 'agent') return agg.kind === 'subagent' && agg.name === item.name;
   if (item.kind === 'mcp') return agg.kind === 'tool' && agg.name.startsWith('mcp__' + normalizeMcp(item.name) + '__');
   return false;
