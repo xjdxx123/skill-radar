@@ -11,6 +11,11 @@ export function formatApply(r: ApplyResult): string {
   lines.push(`    - old: ${r.oldDescription ?? '(none)'}`);
   lines.push(`    + new: ${r.newDescription ?? ''}`);
 
+  if (r.bodyFacets && r.bodyFacets.length) {
+    lines.push('');
+    lines.push(`  body section (skill-radar block): ${r.bodyFacets.join(', ')}`);
+  }
+
   if (r.otherFacets && r.otherFacets.length) {
     lines.push('');
     lines.push('  not applied (manual guidance):');

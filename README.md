@@ -90,13 +90,13 @@ npm run radar -- suggestions [--skill NAME]
 
 ### `apply`
 
-Apply a stored optimization's suggested description to a user or project skill's `SKILL.md`:
+Apply a stored optimization to a user or project skill's `SKILL.md`, rewriting the frontmatter `description` and writing the triggers/non-goals/disambiguation guidance into a managed `skill-radar` body block:
 
 ```
 npm run radar -- apply <skill> [--write] [--db <path>]
 ```
 
-- `npm run radar -- apply <skill> [--write]` — apply a stored optimization's suggested description to a user/project skill's SKILL.md. Dry-run by default; `--write` makes a `.bak` backup then rewrites. Refuses plugin/bundled skills.
+- `npm run radar -- apply <skill> [--write]` — apply a stored optimization to a user/project skill's SKILL.md: rewrites the frontmatter `description` and writes the triggers/non-goals/disambiguation guidance into a managed `skill-radar` body block (idempotent). Dry-run by default; `--write` makes a `.bak` backup first. Refuses plugin/bundled skills.
 
 ### `serve`
 
