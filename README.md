@@ -63,6 +63,31 @@ npm run radar -- report [--db <path>] [--window <days>] [--stale <days>]
 - `--window <days>` — look-back window for usage counts (default: `30`).
 - `--stale <days>` — threshold in days for flagging a capability as underused (default: `14`).
 
+### `analyze`
+
+Run a local headless Claude Code (`claude`) pass over the top ignored skills to produce
+optimization packages — diagnosis plus rewritten description, triggers, and non-goals:
+
+```
+npm run radar -- analyze [--limit N] [--model M]
+```
+
+- `--limit <n>` — max skills to analyze in this run (default: `5`).
+- `--model <model>` — model to pass to `claude -p` (default: `sonnet`).
+
+Requires the `claude` CLI to be installed and authenticated. The command shells out
+to `claude -p` locally and incurs token cost.
+
+### `suggestions`
+
+Print the stored optimization packages produced by `analyze`:
+
+```
+npm run radar -- suggestions [--skill NAME]
+```
+
+- `--skill <name>` — show only the package for a specific skill.
+
 ## Database location
 
 By default the database lives at `~/.skill-radar/skill-radar.sqlite`.
@@ -71,6 +96,6 @@ flag on any command.
 
 ## Notes
 
-- **Local-first**: all data stays on your machine. No network calls are made.
+- **Local-first**: all data stays on your machine. No network calls are made. Analysis sends your prompt history and SKILL.md text to your local `claude` CLI (your own authenticated session) — it stays on your machine; nothing is sent to third parties by skill-radar.
 - **Slash-commands and built-in subagents** are not yet included in the
   capability denominator (planned for a future plan).

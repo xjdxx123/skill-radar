@@ -146,6 +146,9 @@ program
         now: new Date(),
       });
       console.log(`Analyzed ${res.analyzed} skill(s): stored ${res.stored}, skipped ${res.skipped}.`);
+      if (res.stored === 0 && res.analyzed > 0) {
+        console.log('No packages stored. If you expected suggestions, ensure the `claude` CLI is installed and authenticated (analyze shells out to `claude -p`).');
+      }
     } finally {
       db.close();
     }
