@@ -12,6 +12,8 @@ import { formatCandidates } from './missed/report';
 import { analyzeSkills } from './analyze/analyze';
 import { spawnClaudeRunner } from './analyze/runner';
 import { readOptimizations, formatSuggestions } from './analyze/suggestions';
+import { applyOptimization } from './apply/apply';
+import { formatApply } from './apply/report';
 import { startServer } from './server/server';
 
 function defaultDbPath(): string {
@@ -162,6 +164,17 @@ program
   .option('--skill <name>', 'show only this skill')
   .action((opts) => {
     const out = withDb(opts.db, (db) => formatSuggestions(readOptimizations(db, opts.skill)));
+    console.log(out);
+  });
+
+program
+  .command('apply')
+  .description("apply a stored optimization (the suggested description) to a skill's SKILL.md")
+  .argument('<skill>', 'skill name (as shown by `suggestions`)')
+  .option('--db <path>', 'database file path')
+  .option('--write', 'actually write the change (default is a dry-run preview)', false)
+  .action((skill, opts) => {
+    const out = withDb(opts.db, (db) => formatApply(applyOptimization(db, { skill, write: !!opts.write })));
     console.log(out);
   });
 
