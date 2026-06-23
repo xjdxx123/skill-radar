@@ -9,6 +9,9 @@ import { computeCoverage } from './coverage/engine';
 import { formatReport } from './coverage/report';
 import { findMissedInvocations } from './missed/candidates';
 import { formatCandidates } from './missed/report';
+import { analyzeSkills } from './analyze/analyze';
+import { spawnClaudeRunner } from './analyze/runner';
+import { readOptimizations, formatSuggestions } from './analyze/suggestions';
 
 function defaultDbPath(): string {
   if (process.env.SKILL_RADAR_DB) return process.env.SKILL_RADAR_DB;
@@ -118,9 +121,50 @@ program
     console.log(out);
   });
 
-try {
-  program.parse();
-} catch (err) {
+program
+  .command('analyze')
+  .description('run headless Claude Code to produce optimization packages for ignored skills')
+  .option('--db <path>', 'database file path')
+  .option('--limit <n>', 'max skills to analyze this run', '5')
+  .option('--model <model>', 'model for headless analysis', 'sonnet')
+  .option('--window <days>', 'window in days', '30')
+  .option('--stale <days>', 'underused staleness threshold in days', '14')
+  .option('--min-score <n>', 'minimum keyword overlap for a candidate', '2')
+  .action(async (opts) => {
+    const db = openDb(opts.db ?? defaultDbPath());
+    try {
+      const res = await analyzeSkills(db, {
+        runner: spawnClaudeRunner(),
+        model: opts.model,
+        limit: Number(opts.limit),
+        minScore: Number(opts.minScore),
+        perSkill: 5,
+        candidateLimit: 200,
+        maxPromptsPerSkill: 4,
+        windowDays: Number(opts.window),
+        underusedStaleDays: Number(opts.stale),
+        now: new Date(),
+      });
+      console.log(`Analyzed ${res.analyzed} skill(s): stored ${res.stored}, skipped ${res.skipped}.`);
+      if (res.stored === 0 && res.analyzed > 0) {
+        console.log('No packages stored. If you expected suggestions, ensure the `claude` CLI is installed and authenticated (analyze shells out to `claude -p`).');
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+program
+  .command('suggestions')
+  .description('show stored optimization packages')
+  .option('--db <path>', 'database file path')
+  .option('--skill <name>', 'show only this skill')
+  .action((opts) => {
+    const out = withDb(opts.db, (db) => formatSuggestions(readOptimizations(db, opts.skill)));
+    console.log(out);
+  });
+
+program.parseAsync().catch((err) => {
   console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
-}
+});

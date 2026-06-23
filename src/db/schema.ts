@@ -51,4 +51,16 @@ CREATE TABLE IF NOT EXISTS prompts (
   text TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_prompts_session ON prompts(session_id);
+
+CREATE TABLE IF NOT EXISTS optimizations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL,
+  target_kind TEXT NOT NULL,
+  target_name TEXT NOT NULL,
+  status TEXT NOT NULL,
+  overall_confidence TEXT,
+  facets TEXT NOT NULL,
+  applied INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(target_kind, target_name)
+);
 `;

@@ -35,4 +35,18 @@ describe('openDb', () => {
     const c = db.prepare(`SELECT COUNT(*) AS c FROM prompts`).get() as { c: number };
     expect(c.c).toBe(1);
   });
+
+  test('optimizations table exists and upserts by (target_kind, target_name)', () => {
+    const db = openDb(':memory:');
+    const up = db.prepare(
+      `INSERT INTO optimizations (created_at, target_kind, target_name, status, overall_confidence, facets, applied)
+       VALUES (?,?,?,?,?,?,0)
+       ON CONFLICT(target_kind, target_name) DO UPDATE SET facets = excluded.facets`,
+    );
+    up.run('t1', 'skill', 'verify', 'never', 'high', '{"a":1}');
+    up.run('t2', 'skill', 'verify', 'never', 'low', '{"a":2}');
+    const rows = db.prepare(`SELECT facets FROM optimizations WHERE target_name = 'verify'`).all() as { facets: string }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].facets).toBe('{"a":2}');
+  });
 });
