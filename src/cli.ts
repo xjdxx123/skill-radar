@@ -7,6 +7,8 @@ import { ingestClaudeCode } from './ingest/adapter';
 import { scanInventory, writeInventory } from './inventory/scan';
 import { computeCoverage } from './coverage/engine';
 import { formatReport } from './coverage/report';
+import { findMissedInvocations } from './missed/candidates';
+import { formatCandidates } from './missed/report';
 
 function defaultDbPath(): string {
   if (process.env.SKILL_RADAR_DB) return process.env.SKILL_RADAR_DB;
@@ -86,6 +88,31 @@ program
           now,
         }),
         { windowDays: Number(opts.window), now },
+      ),
+    );
+    console.log(out);
+  });
+
+program
+  .command('candidates')
+  .description('show prompts where an ignored/underused skill seemingly should have fired')
+  .option('--db <path>', 'database file path')
+  .option('--window <days>', 'window in days', '30')
+  .option('--stale <days>', 'underused staleness threshold in days', '14')
+  .option('--min-score <n>', 'minimum keyword overlap', '2')
+  .option('--per-skill <n>', 'max candidates per skill', '5')
+  .option('--limit <n>', 'max total candidates', '50')
+  .action((opts) => {
+    const out = withDb(opts.db, (db) =>
+      formatCandidates(
+        findMissedInvocations(db, {
+          windowDays: Number(opts.window),
+          underusedStaleDays: Number(opts.stale),
+          now: new Date(),
+          minScore: Number(opts.minScore),
+          perSkill: Number(opts.perSkill),
+          limit: Number(opts.limit),
+        }),
       ),
     );
     console.log(out);

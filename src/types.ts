@@ -48,3 +48,13 @@ export interface PromptRow {
   ts: string;
   text: string;
 }
+
+export interface MissedCandidate {
+  skill: string;
+  scope: string;
+  promptText: string;
+  sessionId: string;
+  ts: string;
+  score: number;
+  matched: string[];
+}
