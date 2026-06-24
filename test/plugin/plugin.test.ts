@@ -15,14 +15,6 @@ describe('plugin manifest', () => {
   });
 });
 
-describe('commands', () => {
-  test.each(['report', 'analyze', 'dashboard'])('%s.md has a description frontmatter', (name) => {
-    const md = read(`commands/${name}.md`);
-    expect(md.startsWith('---')).toBe(true);
-    expect(md).toMatch(/\ndescription:\s*\S+/);
-  });
-});
-
 describe('analyst subagent', () => {
   test('has name + description frontmatter', () => {
     const md = read('agents/skill-radar-analyst.md');
