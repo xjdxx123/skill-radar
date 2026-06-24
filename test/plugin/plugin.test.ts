@@ -43,3 +43,18 @@ describe('hooks', () => {
     expect(cmd.async).toBe(true);
   });
 });
+
+describe('PostToolUse hook', () => {
+  test('hooks.json defines a guarded PostToolUse hook scoped to Skill/Agent/Task', () => {
+    const h = JSON.parse(read('hooks/hooks.json'));
+    const post = h.hooks?.PostToolUse;
+    expect(Array.isArray(post)).toBe(true);
+    const entry = post[0];
+    expect(entry.matcher).toMatch(/Skill/);
+    expect(entry.matcher).toMatch(/Agent/);
+    const cmd = entry.hooks[0];
+    expect(cmd.command).toContain('command -v skill-radar');
+    expect(cmd.command).toContain('ingest --hook');
+    expect(cmd.async).toBe(true);
+  });
+});

@@ -150,3 +150,4 @@ installing the plugin without `npm link` does no harm.
 - **`/skill-radar:dashboard`** — launch the local web dashboard.
 - **`skill-radar-analyst`** subagent — diagnoses why a skill is ignored and proposes routing fixes.
 - **SessionStart hook** — runs `skill-radar ingest && scan` (incremental, async) so your data stays current.
+- **PostToolUse hook** — captures `Skill`/`Agent`/`Task` invocations in real time via `skill-radar ingest --hook` (deduped against the batch by `tool_use_id`; guarded + async; no-op without the CLI).

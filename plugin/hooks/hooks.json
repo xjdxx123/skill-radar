@@ -14,6 +14,20 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Skill|Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "export PATH=\"$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\"; if command -v skill-radar >/dev/null 2>&1; then skill-radar ingest --hook >/dev/null 2>&1; fi; echo '{\"continue\":true,\"suppressOutput\":true}'",
+            "async": true,
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }

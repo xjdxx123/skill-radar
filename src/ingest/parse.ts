@@ -16,7 +16,7 @@ function userText(content: unknown): string | null {
   return null;
 }
 
-function classifyToolUse(block: any): { kind: EventKind; name: string } | null {
+export function classifyToolUse(block: any): { kind: EventKind; name: string } | null {
   const name = block?.name;
   if (typeof name !== 'string' || !name) return null;
   const input = block.input ?? {};
