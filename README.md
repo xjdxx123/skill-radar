@@ -135,15 +135,15 @@ flag on any command.
 
 ## Claude Code plugin
 
-skill-radar ships as a Claude Code plugin (`plugin/`): slash commands, an analyst subagent, and a SessionStart hook
-that keeps usage data fresh automatically.
+skill-radar ships as a Claude Code plugin (`plugin/`): skills, an analyst subagent, and hooks
+that keep usage data fresh automatically.
 
 ### Install
 
 ```bash
 git clone https://github.com/xjdxx123/skill-radar && cd skill-radar
 npm install
-npm link   # puts the `skill-radar` command on your PATH (used by the plugin's commands + hook)
+npm link   # puts the `skill-radar` command on your PATH (used by the plugin's skills + hooks)
 ```
 
 Use a normal `npm install` (not `--production` / `--omit=dev`): the `skill-radar` command runs via `tsx`, which is a dev dependency.
@@ -154,9 +154,8 @@ installing the plugin without `npm link` does no harm.
 
 ### What you get
 
-- **`/skill-radar:report`** — coverage summary (ignored / underused / top-used).
-- **`/skill-radar:analyze`** — headless AI optimization pass + suggestions.
-- **`/skill-radar:dashboard`** — launch the local web dashboard.
+- **`skill-radar` skill** — ask things like "which skills am I ignoring?" or "optimize my skill usage" and Claude Code runs the coverage report proactively (and, if you ask, the AI optimization pass).
+- **`skill-radar-dashboard` skill** — "open my skill dashboard" launches the local web dashboard.
 - **`skill-radar-analyst`** subagent — diagnoses why a skill is ignored and proposes routing fixes.
 - **SessionStart hook** — runs `skill-radar ingest && scan` (incremental, async) so your data stays current.
 - **PostToolUse hook** — captures `Skill`/`Agent`/`Task` invocations in real time via `skill-radar ingest --hook` (deduped against the batch by `tool_use_id`; guarded + async; no-op without the CLI).

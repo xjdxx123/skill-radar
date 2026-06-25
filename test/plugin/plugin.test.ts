@@ -15,14 +15,6 @@ describe('plugin manifest', () => {
   });
 });
 
-describe('commands', () => {
-  test.each(['report', 'analyze', 'dashboard'])('%s.md has a description frontmatter', (name) => {
-    const md = read(`commands/${name}.md`);
-    expect(md.startsWith('---')).toBe(true);
-    expect(md).toMatch(/\ndescription:\s*\S+/);
-  });
-});
-
 describe('analyst subagent', () => {
   test('has name + description frontmatter', () => {
     const md = read('agents/skill-radar-analyst.md');
@@ -56,5 +48,27 @@ describe('PostToolUse hook', () => {
     expect(cmd.command).toContain('command -v skill-radar');
     expect(cmd.command).toContain('ingest --hook');
     expect(cmd.async).toBe(true);
+  });
+});
+
+describe('skills (proactive)', () => {
+  test.each(['skill-radar', 'skill-radar-dashboard'])('%s/SKILL.md has matching name + description frontmatter', (name) => {
+    const md = read(`skills/${name}/SKILL.md`);
+    expect(md.startsWith('---')).toBe(true);
+    expect(md).toMatch(new RegExp(`\\nname:\\s*${name}\\b`));
+    expect(md).toMatch(/\ndescription:\s*\S+/);
+  });
+
+  test('the main skill description is scoped to installed-capability usage (avoids over-broad proactive triggers)', () => {
+    const md = read('skills/skill-radar/SKILL.md');
+    const desc = md.match(/\ndescription:\s*(.+)/)![1].toLowerCase();
+    expect(desc).toMatch(/ignored|underused|never/);
+    expect(desc).toContain('installed');
+  });
+
+  test('the dashboard skill mentions launching the dashboard', () => {
+    const md = read('skills/skill-radar-dashboard/SKILL.md').toLowerCase();
+    expect(md).toMatch(/dashboard/);
+    expect(md).toMatch(/serve/);
   });
 });
