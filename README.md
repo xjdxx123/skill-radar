@@ -51,6 +51,11 @@ npm run radar -- scan [--db <path>] [--user-dir <dir>] [--project-dir <dir>]
 - `--user-dir <dir>` — override the default `~/.claude` user directory.
 - `--project-dir <dir>` — override the default `<cwd>/.claude` project directory.
 
+Plugin agents are inventoried whether they live in a plugin's `agents/` subdirectory
+or as flat `.md` files at the plugin version root (the layout used by, e.g.,
+`voltagent-subagents`). A flat file counts as an agent only when its frontmatter has
+both `name` and `description`, so READMEs and other docs are skipped.
+
 ### `report`
 
 Print the coverage report — ignored capabilities (never used), underused

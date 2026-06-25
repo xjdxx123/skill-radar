@@ -70,6 +70,47 @@ describe('scanInventory', () => {
     expect(find('agent', 'ship-loop:ship-implementer')).toMatchObject({ scope: 'plugin' });
   });
 
+  test('inventories plugin agents stored flat at the version root (voltagent layout)', () => {
+    const cache = join(scratch, 'cache');
+    const base = join(cache, 'voltagent-subagents', 'voltagent-core-dev', '1.0.2');
+    mkdirSync(base, { recursive: true });
+    writeFileSync(join(base, 'frontend-developer.md'),
+      `---\nname: frontend-developer\ndescription: build frontend apps across React, Vue, Angular\ntools: Read, Write\n---\nbody`);
+
+    const items = scanInventory({ userDir: join(scratch, 'nouser'), pluginsCacheDir: cache });
+    const agent = items.find((i) => i.kind === 'agent' && i.name === 'voltagent-core-dev:frontend-developer');
+    expect(agent).toMatchObject({ scope: 'plugin', description: 'build frontend apps across React, Vue, Angular' });
+  });
+
+  test('does not inventory README/doc files at the plugin root, even with frontmatter', () => {
+    const cache = join(scratch, 'cache');
+    const base = join(cache, 'voltagent-subagents', 'voltagent-core-dev', '1.0.2');
+    mkdirSync(base, { recursive: true });
+    writeFileSync(join(base, 'backend-developer.md'),
+      `---\nname: backend-developer\ndescription: build server-side APIs\n---\nbody`);
+    writeFileSync(join(base, 'README.md'),
+      `---\nname: core-dev\ndescription: A collection of core development subagents\n---\n# Core Development Subagents`);
+    writeFileSync(join(base, 'CHANGELOG.md'),
+      `---\nname: changelog\ndescription: release notes\n---\n## 1.0.2`);
+
+    const items = scanInventory({ userDir: join(scratch, 'nouser'), pluginsCacheDir: cache });
+    expect(items.some((i) => i.kind === 'agent' && i.name === 'voltagent-core-dev:backend-developer')).toBe(true);
+    expect(items.some((i) => i.name === 'voltagent-core-dev:core-dev')).toBe(false);
+    expect(items.some((i) => i.name === 'voltagent-core-dev:changelog')).toBe(false);
+  });
+
+  test('does not double-count an agent present both flat and under agents/', () => {
+    const cache = join(scratch, 'cache');
+    const base = join(cache, 'mp', 'dual-plugin', '2.0.0');
+    mkdirSync(join(base, 'agents'), { recursive: true });
+    const body = `---\nname: helper\ndescription: a helper agent\n---\nbody`;
+    writeFileSync(join(base, 'agents', 'helper.md'), body);
+    writeFileSync(join(base, 'helper.md'), body);
+
+    const items = scanInventory({ userDir: join(scratch, 'nouser'), pluginsCacheDir: cache });
+    expect(items.filter((i) => i.name === 'dual-plugin:helper').length).toBe(1);
+  });
+
   test('returns [] when nothing exists', () => {
     expect(scanInventory({ userDir: join(userDir, 'nope'), projectDir: join(projDir, 'nope') })).toEqual([]);
   });

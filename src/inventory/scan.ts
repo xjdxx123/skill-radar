@@ -72,17 +72,42 @@ function scanSkills(claudeDir: string, scope: Scope, qualifier?: string): Invent
   return items;
 }
 
+function agentItem(path: string, scope: Scope, qualifier: string | undefined, bare: string, description: string | null): InventoryItem {
+  return {
+    kind: 'agent', name: qualifier ? `${qualifier}:${bare}` : bare,
+    scope, description, triggers: null, path,
+  };
+}
+
 function scanAgents(claudeDir: string, scope: Scope, qualifier?: string): InventoryItem[] {
   const root = join(claudeDir, 'agents');
   const items: InventoryItem[] = [];
   for (const file of mdFiles(root)) {
     const path = join(root, file);
     const fm = parseFrontmatter(readFileSync(path, 'utf8'));
-    const bare = fm.name ?? basename(file, '.md');
-    items.push({
-      kind: 'agent', name: qualifier ? `${qualifier}:${bare}` : bare,
-      scope, description: fm.description ?? null, triggers: null, path,
-    });
+    items.push(agentItem(path, scope, qualifier, fm.name ?? basename(file, '.md'), fm.description ?? null));
+  }
+  return items;
+}
+
+// Repo/plugin documentation files that may carry frontmatter but are never agents.
+const DOC_BASENAMES = new Set([
+  'readme', 'changelog', 'license', 'licence', 'contributing', 'code_of_conduct',
+]);
+
+// Some plugins (e.g. voltagent-subagents) ship agents as flat `.md` files at the
+// plugin version root instead of inside an `agents/` subdir. Treat a flat file as an
+// agent iff its frontmatter carries both `name` and `description` (the agent signature),
+// which excludes README/CHANGELOG/etc.; a doc-basename denylist guards the rare case
+// of a documentation file that happens to carry frontmatter.
+function scanFlatAgents(dir: string, scope: Scope, qualifier?: string): InventoryItem[] {
+  const items: InventoryItem[] = [];
+  for (const file of mdFiles(dir)) {
+    if (DOC_BASENAMES.has(basename(file, '.md').toLowerCase())) continue;
+    const path = join(dir, file);
+    const fm = parseFrontmatter(readFileSync(path, 'utf8'));
+    if (!fm.name || !fm.description) continue;
+    items.push(agentItem(path, scope, qualifier, fm.name, fm.description));
   }
   return items;
 }
@@ -110,6 +135,7 @@ function scanPlugins(cacheDir: string): InventoryItem[] {
         const base = join(cacheDir, marketplace, plugin, version);
         items.push(...scanSkills(base, 'plugin', plugin));
         items.push(...scanAgents(base, 'plugin', plugin));
+        items.push(...scanFlatAgents(base, 'plugin', plugin));
       }
     }
   }
