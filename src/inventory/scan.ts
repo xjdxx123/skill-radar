@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { Db } from '../db/index';
 import type { InventoryItem, Scope } from '../types';
@@ -36,12 +36,36 @@ export function parseFrontmatter(md: string): Frontmatter {
   return fm;
 }
 
+function isDir(path: string): boolean {
+  try {
+    return statSync(path).isDirectory(); // statSync follows symlinks; throws on a dangling link
+  } catch {
+    return false;
+  }
+}
+
 function dirNames(dir: string): string[] {
   if (!existsSync(dir)) return [];
   try {
-    return readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+    // Include symlinks that resolve to directories — some plugins (e.g.
+    // academic-research-skills) expose their skill dirs as `skills/<name> -> ../<name>`
+    // symlinks, and a Dirent for a symlink reports isDirectory() === false.
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() || (e.isSymbolicLink() && isDir(join(dir, e.name))))
+      .map((e) => e.name);
   } catch {
     return [];
+  }
+}
+
+// Read a file, returning null instead of throwing — so one unreadable file
+// (EACCES, a TOCTOU broken symlink) degrades to skipping that item rather than
+// aborting the entire scan. Matters more now that we follow symlinks.
+function readText(path: string): string | null {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch {
+    return null;
   }
 }
 
@@ -61,8 +85,9 @@ function scanSkills(claudeDir: string, scope: Scope, qualifier?: string): Invent
   const items: InventoryItem[] = [];
   for (const name of dirNames(root)) {
     const path = join(root, name, 'SKILL.md');
-    if (!existsSync(path)) continue;
-    const fm = parseFrontmatter(readFileSync(path, 'utf8'));
+    const raw = readText(path); // null when missing/unreadable (subsumes the existence check)
+    if (raw === null) continue;
+    const fm = parseFrontmatter(raw);
     const bare = fm.name ?? name;
     items.push({
       kind: 'skill', name: qualifier ? `${qualifier}:${bare}` : bare,
@@ -79,20 +104,54 @@ function agentItem(path: string, scope: Scope, qualifier: string | undefined, ba
   };
 }
 
-function scanAgents(claudeDir: string, scope: Scope, qualifier?: string): InventoryItem[] {
-  const root = join(claudeDir, 'agents');
+function scanAgentDir(agentsDir: string, scope: Scope, qualifier?: string): InventoryItem[] {
   const items: InventoryItem[] = [];
-  for (const file of mdFiles(root)) {
-    const path = join(root, file);
-    const fm = parseFrontmatter(readFileSync(path, 'utf8'));
+  for (const file of mdFiles(agentsDir)) {
+    if (DOC_BASENAMES.has(basename(file, '.md').toLowerCase())) continue; // a README dropped in agents/ is not an agent
+    const path = join(agentsDir, file);
+    const raw = readText(path);
+    if (raw === null) continue;
+    const fm = parseFrontmatter(raw);
     items.push(agentItem(path, scope, qualifier, fm.name ?? basename(file, '.md'), fm.description ?? null));
   }
   return items;
 }
 
-// Repo/plugin documentation files that may carry frontmatter but are never agents.
+function scanAgents(claudeDir: string, scope: Scope, qualifier?: string): InventoryItem[] {
+  return scanAgentDir(join(claudeDir, 'agents'), scope, qualifier);
+}
+
+const SKIP_DIRS = new Set(['node_modules', '.git']);
+
+// Recursively find every directory named `agents` under a plugin version dir.
+// A real OR symlinked `agents` dir counts (so `<version>/agents -> ../shared` works),
+// but we only RECURSE into real subdirectories — never following other symlinks —
+// so we don't re-walk the `skills/<name> -> ../<name>` links (double-scan/cycle).
+// Catches both `<version>/agents/` and nested `<version>/<component>/agents/`.
+function findAgentsDirs(root: string, depth = 0): string[] {
+  if (depth > 5) return [];
+  let entries;
+  try {
+    entries = readdirSync(root, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  for (const e of entries) {
+    if (SKIP_DIRS.has(e.name)) continue;
+    const full = join(root, e.name);
+    if (e.name === 'agents' && (e.isDirectory() || (e.isSymbolicLink() && isDir(full)))) {
+      out.push(full); // an agents dir holds .md files — don't recurse into it
+    } else if (e.isDirectory()) {
+      out.push(...findAgentsDirs(full, depth + 1));
+    }
+  }
+  return out;
+}
+
+// Repo/plugin documentation/manifest files that may carry frontmatter but are never agents.
 const DOC_BASENAMES = new Set([
-  'readme', 'changelog', 'license', 'licence', 'contributing', 'code_of_conduct',
+  'readme', 'changelog', 'license', 'licence', 'contributing', 'code_of_conduct', 'skill',
 ]);
 
 // Some plugins (e.g. voltagent-subagents) ship agents as flat `.md` files at the
@@ -105,7 +164,9 @@ function scanFlatAgents(dir: string, scope: Scope, qualifier?: string): Inventor
   for (const file of mdFiles(dir)) {
     if (DOC_BASENAMES.has(basename(file, '.md').toLowerCase())) continue;
     const path = join(dir, file);
-    const fm = parseFrontmatter(readFileSync(path, 'utf8'));
+    const raw = readText(path);
+    if (raw === null) continue;
+    const fm = parseFrontmatter(raw);
     if (!fm.name || !fm.description) continue;
     items.push(agentItem(path, scope, qualifier, fm.name, fm.description));
   }
@@ -134,8 +195,16 @@ function scanPlugins(cacheDir: string): InventoryItem[] {
       for (const version of dirNames(join(cacheDir, marketplace, plugin))) {
         const base = join(cacheDir, marketplace, plugin, version);
         items.push(...scanSkills(base, 'plugin', plugin));
-        items.push(...scanAgents(base, 'plugin', plugin));
-        items.push(...scanFlatAgents(base, 'plugin', plugin));
+        for (const agentsDir of findAgentsDirs(base)) {
+          items.push(...scanAgentDir(agentsDir, 'plugin', plugin));
+        }
+        // Flat-at-root agents (voltagent layout) only for "pure flat" plugins. A
+        // version dir with a SKILL.md manifest or a skills/ dir is a structured
+        // plugin whose root .md files are docs/manifests, not agents — flat-scanning
+        // it would mint phantoms like `engineering-skills:engineering-skills`.
+        if (!existsSync(join(base, 'SKILL.md')) && !existsSync(join(base, 'skills'))) {
+          items.push(...scanFlatAgents(base, 'plugin', plugin));
+        }
       }
     }
   }
